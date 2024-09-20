@@ -51,6 +51,30 @@ export const persistedQueries = (options: PersistedQueriesOptions): Plugin => {
       if (id.includes("node_modules")) return;
       if (!code.includes("graphql")) return;
 
+      /**
+       * Given a file, recursively load queries and fragments from it and any files it imports from.
+       */
+      const recursivelyIndex = async (id: string) => {
+        const contents = readFileSync(id, "utf8");
+        const imports = parseImports(contents);
+        for (const query of getQueries(contents)) {
+          if (query.source.includes("fragment ")) {
+            fragmentValues.set(query.name, query);
+          }
+
+          if (query.deps) {
+            for (const dep of query.deps) {
+              const importSource = imports.get(dep);
+              if (importSource && !fragmentValues.has(dep)) {
+                const resolved = await this.resolve(importSource, id);
+                if (!resolved) throw new Error(`Cannot resolve ${importSource} from ${id}`);
+                await recursivelyIndex(resolved.id);
+              }
+            }
+          }
+        }
+      };
+
       let modified = false;
       const imports = parseImports(code);
       const ast = new MagicString(code);
@@ -63,22 +87,33 @@ export const persistedQueries = (options: PersistedQueriesOptions): Plugin => {
             const importSource = imports.get(depName);
             if (importSource && !fragmentValues.has(depName)) {
               // if the fragment value is not loaded, we need to load it from disk.
-              const fileId = await this.resolve(importSource, id);
-              if (!fileId) throw new Error(`Cannot resolve ${importSource} from ${id}`);
-              // this.load will call this plugins transform(), which will index the fragments
-              // so this is all we have to do.
-              await this.load(fileId);
-              this.parse;
+              const resolved = await this.resolve(importSource, id);
+              if (!resolved) throw new Error(`Cannot resolve ${importSource} from ${id}`);
+              // in dev mode, this.load will not load the file (because, pfft, who would want that?)
+              // so we need to manually index the files queries.
+              // but in other modes, like `vite build`, this.load will load the file and run transforms,
+              // so we can rely on that which is faster.
+              // todo: there must be a better way to do this, but i can't find it.
+              if (isDevServer) {
+                // this is ugly, but it *should* be fine because we should only have to index a file once
+                // and usually only 2-3 files per page load in dev.
+                await recursivelyIndex(resolved.id);
+              } else {
+                await this.load(resolved);
+              }
             }
 
             const fragment = fragmentValues.get(depName);
-            if (!fragment) {
-              throw new Error(`Fragment ${depName} not found`);
+            if (!fragment) throw new Error(`Fragment ${depName} not found`);
+
+            if (merged.includes(fragment.source)) {
+              // this shouldn't really happen, but just in case. if we've already
+              // added the fragment, we don't need to do it again. we can also assume we've
+              // already added the dependencies.
+              return;
             }
 
-            if (merged.includes(fragment.source)) return;
             merged = merged + "\n" + fragment.source;
-
             for (const dep of fragment.deps) {
               await addDependency(dep);
             }
