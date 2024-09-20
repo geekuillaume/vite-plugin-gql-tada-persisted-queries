@@ -15,6 +15,7 @@ export function* getQueries(code: string): Generator<Query> {
     const source = match.groups!.source!;
     const name = match.groups!.name!;
     const frags = match.groups?.frags?.split(",").map((frag) => frag.trim());
+
     yield {
       index: [match.index, match.index + match[0].length],
       source: source,

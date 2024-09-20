@@ -65,3 +65,4 @@ export default defineConfig({
 - fragment definitions and fragment imports are not actually removed when they are merged into queries. they are converted to a persisted query too, but because they are unused treeshaking will remove them from the final bundle.
 - `removeSource` may break some client libraries, it should work the same as [Compiling away GraphQL Documents](https://gql-tada.0no.co/guides/persisted-documents#compiling-away-graphql-documents) in gql.tada's documentation and has the same caveats.
 - this uses regex to extract imports/queries, so it might have some edge cases not accounted for.
+- variable names for queries must be globally unique
