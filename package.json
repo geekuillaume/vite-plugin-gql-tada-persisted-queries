@@ -1,7 +1,18 @@
 {
   "name": "vite-plugin-gql-tada-persisted-queries",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "AGPL-3.0-only",
+  "author": "Ryan <ryan@sylver.me>",
+  "keywords": [
+    "gql.tada",
+    "vite",
+    "persisted queries",
+    "graphql"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sylv/vite-plugin-gql-tada-persisted-queries.git"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
