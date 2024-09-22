@@ -74,14 +74,22 @@ export const persistedQueries = (options: PersistedQueriesOptions): Plugin => {
   }
 
   let _writeTimeout: NodeJS.Timeout | null = null;
+  let currentIntroHash: string | undefined;
   function writeDebounce() {
     if (_writeTimeout) clearTimeout(_writeTimeout);
     _writeTimeout = setTimeout(() => {
       writeQueryMap();
       if (options.introspection) {
-        writeIntrospection(options.introspection).catch((error) => {
-          console.error("Failed to write introspection", error);
-        });
+        writeIntrospection({
+          ...options.introspection,
+          __currentHash: currentIntroHash,
+        })
+          .then((hash) => {
+            currentIntroHash = hash;
+          })
+          .catch((error) => {
+            console.error("Failed to write introspection", error);
+          });
       }
       _writeTimeout = null;
     }, 500);

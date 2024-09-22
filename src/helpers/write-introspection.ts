@@ -1,17 +1,20 @@
+import { readFile, writeFile } from "fs/promises";
 import {
-  introspectionFromSchema,
   buildSchema,
   getIntrospectionQuery,
+  introspectionFromSchema,
   type IntrospectionOptions,
   type IntrospectionQuery,
 } from "graphql/utilities";
-import { readFile, writeFile } from "fs/promises";
+import hashObject from "hash-object";
 
 export interface WriteIntrospectionOptions {
   schema: string;
   possibleTypesPath?: string;
   schemaPath?: string;
   options?: IntrospectionOptions;
+  /** @internal */
+  __currentHash?: string;
 }
 
 const toPossibleTypes = (introspection: IntrospectionQuery) => {
@@ -30,6 +33,11 @@ const writePossibleTypesFile = async (options: WriteIntrospectionOptions) => {
   const schema = buildSchema(contents);
   const introspection = introspectionFromSchema(schema, options?.options);
 
+  const hash = hashObject(introspection);
+  if (options.__currentHash === hash) {
+    return hash;
+  }
+
   if (options.possibleTypesPath) {
     const possibleTypes = toPossibleTypes(introspection);
     await writeFile(options.possibleTypesPath, JSON.stringify(possibleTypes, null, 2));
@@ -38,6 +46,8 @@ const writePossibleTypesFile = async (options: WriteIntrospectionOptions) => {
   if (options.schemaPath) {
     await writeFile(options.schemaPath, JSON.stringify(introspection, null, 2));
   }
+
+  return hash;
 };
 
 const writePossibleTypesUri = async (options: WriteIntrospectionOptions) => {
@@ -58,6 +68,11 @@ const writePossibleTypesUri = async (options: WriteIntrospectionOptions) => {
   const result = (await response.json()) as { data: IntrospectionQuery };
   const introspection = result.data;
 
+  const hash = hashObject(introspection);
+  if (options.__currentHash === hash) {
+    return hash;
+  }
+
   if (options.possibleTypesPath) {
     const possibleTypes = toPossibleTypes(introspection);
     await writeFile(options.possibleTypesPath, JSON.stringify(possibleTypes, null, 2));
@@ -66,9 +81,11 @@ const writePossibleTypesUri = async (options: WriteIntrospectionOptions) => {
   if (options.schemaPath) {
     await writeFile(options.schemaPath, JSON.stringify(introspection, null, 2));
   }
+
+  return hash;
 };
 
-export const writeIntrospection = async (options: WriteIntrospectionOptions) => {
+export const writeIntrospection = async (options: WriteIntrospectionOptions): Promise<string> => {
   if (options.schema.startsWith("http")) {
     return writePossibleTypesUri(options);
   }
