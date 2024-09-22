@@ -5,6 +5,7 @@ this plugin automatically handles [gql.tada's persisted queries](https://gql-tad
 - converts all `graphql()` calls into `graphql.persisted()` calls
 - optionally removes the source code, leaving only the persisted query hash
 - merges new query hashes into an existing persisted queries file
+- writes introspected schema and/or `possibleTypes` 
 
 essentially, it converts this:
 ```ts

@@ -7,12 +7,14 @@ import MagicString from "magic-string";
 import { getQueries, type Query } from "./helpers/get-queries";
 import { parseImports } from "./helpers/parse-imports";
 import type { Plugin } from "vite";
+import { writeIntrospection, type WriteIntrospectionOptions } from "./helpers/write-introspection";
 
 export interface PersistedQueriesOptions {
   outputPath: string;
   addTypename?: boolean;
   enabled?: boolean;
   removeSource?: boolean;
+  introspection?: WriteIntrospectionOptions;
 }
 
 export const persistedQueries = (options: PersistedQueriesOptions): Plugin => {
@@ -71,10 +73,27 @@ export const persistedQueries = (options: PersistedQueriesOptions): Plugin => {
     return { hash: queryHash, serialized: serializedQuery };
   }
 
+  let _writeTimeout: NodeJS.Timeout | null = null;
+  function writeDebounce() {
+    if (_writeTimeout) clearTimeout(_writeTimeout);
+    _writeTimeout = setTimeout(() => {
+      writeQueryMap();
+      if (options.introspection) {
+        writeIntrospection(options.introspection).catch((error) => {
+          console.error("Failed to write introspection", error);
+        });
+      }
+      _writeTimeout = null;
+    }, 500);
+  }
+
   return {
     name: "vite-plugin-gql-tada-persisted-queries",
-    buildEnd: () => {
+    buildEnd: async () => {
       writeQueryMap();
+      if (options.introspection) {
+        await writeIntrospection(options.introspection);
+      }
     },
     configResolved: (config) => {
       isDevServer = config.command === "serve";
@@ -141,7 +160,7 @@ export const persistedQueries = (options: PersistedQueriesOptions): Plugin => {
       if (isDevServer) {
         // in dev mode the buildEnd hook is not called, so we need to write the file every time
         // todo: probably a better way to do this?
-        writeQueryMap();
+        writeDebounce();
       }
 
       if (modified) {

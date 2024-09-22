@@ -1,8 +1,9 @@
 {
   "name": "vite-plugin-gql-tada-persisted-queries",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "license": "AGPL-3.0-only",
   "author": "Ryan <ryan@sylver.me>",
+  "type": "module",
   "keywords": [
     "gql.tada",
     "vite",
