@@ -1,3 +1,4 @@
+import { minifyIntrospectionQuery } from "@urql/introspection";
 import { readFile, writeFile } from "fs/promises";
 import {
   buildSchema,
@@ -12,6 +13,7 @@ export interface WriteIntrospectionOptions {
   schema: string;
   possibleTypesPath?: string;
   schemaPath?: string;
+  urqlSchemaPath?: string;
   options?: IntrospectionOptions;
   /** @internal */
   __currentHash?: string;
@@ -31,7 +33,10 @@ const toPossibleTypes = (introspection: IntrospectionQuery) => {
 const writePossibleTypesFile = async (options: WriteIntrospectionOptions) => {
   const contents = await readFile(options.schema, "utf8");
   const schema = buildSchema(contents);
-  const introspection = introspectionFromSchema(schema, options?.options);
+  const introspection = introspectionFromSchema(schema, {
+    descriptions: false,
+    ...options.options,
+  });
 
   const hash = hashObject(introspection);
   if (options.__currentHash === hash) {
@@ -47,6 +52,11 @@ const writePossibleTypesFile = async (options: WriteIntrospectionOptions) => {
     await writeFile(options.schemaPath, JSON.stringify(introspection, null, 2));
   }
 
+  if (options.urqlSchemaPath) {
+    const minified = minifyIntrospectionQuery(introspection);
+    await writeFile(options.urqlSchemaPath, JSON.stringify(minified, null, 2));
+  }
+
   return hash;
 };
 
@@ -56,7 +66,10 @@ const writePossibleTypesUri = async (options: WriteIntrospectionOptions) => {
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
       variables: {},
-      query: getIntrospectionQuery(options.options),
+      query: getIntrospectionQuery({
+        descriptions: false,
+        ...options.options,
+      }),
     }),
   });
 
@@ -80,6 +93,11 @@ const writePossibleTypesUri = async (options: WriteIntrospectionOptions) => {
 
   if (options.schemaPath) {
     await writeFile(options.schemaPath, JSON.stringify(introspection, null, 2));
+  }
+
+  if (options.urqlSchemaPath) {
+    const minified = minifyIntrospectionQuery(introspection);
+    await writeFile(options.urqlSchemaPath, JSON.stringify(minified, null, 2));
   }
 
   return hash;

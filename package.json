@@ -1,6 +1,6 @@
 {
   "name": "vite-plugin-gql-tada-persisted-queries",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "license": "AGPL-3.0-only",
   "author": "Ryan <ryan@sylver.me>",
   "keywords": [
@@ -33,6 +33,7 @@
     "@biomejs/biome": "^1.9.2",
     "@graphql-tools/documents": "^1.0.1",
     "@types/node": "20",
+    "@urql/introspection": "^1.1.0",
     "graphql": "^16.9.0",
     "hash-object": "^5.0.1",
     "magic-string": "^0.30.11",
